@@ -44,6 +44,10 @@ final class Renderer: NSObject {
 
     private let depthStencilState: MTLDepthStencilState
 
+    private let textureLoader: MTKTextureLoader
+    private var baseColorTexture: MTLTexture?
+    private let samplerState: MTLSamplerState
+
     init(view: MTKView, device: MTLDevice) {
         self.view = view
         self.device = device
@@ -56,8 +60,10 @@ final class Renderer: NSObject {
         self.depthStencilState = Renderer.buildDepthStencilState(device: device)
 
         // init texture loader
+        textureLoader = MTKTextureLoader(device: device)
 
         // load sampler state
+        samplerState = Renderer.buildSamplerState(device: device)
 
         // build lights
 
@@ -69,11 +75,12 @@ final class Renderer: NSObject {
         view.colorPixelFormat = .bgra8Unorm
         view.depthStencilPixelFormat = .depth32Float
 
-        // load texture
+        baseColorTexture = Renderer.loadTexture(textureLoader: textureLoader)
     }
 
     static func loadTexture(textureLoader: MTKTextureLoader) -> MTLTexture? {
-        return nil
+        let options: [MTKTextureLoader.Option: Any] = [.generateMipmaps: true, .SRGB: true]
+        return try? textureLoader.newTexture(name: "texture", scaleFactor: 1, bundle: nil, options: options)
     }
 
     static func buildLights() -> [Light] {
@@ -81,7 +88,12 @@ final class Renderer: NSObject {
     }
 
     static func buildSamplerState(device: MTLDevice) -> MTLSamplerState {
-        fatalError("not implemented")
+        let samplerDescriptor = MTLSamplerDescriptor()
+        samplerDescriptor.normalizedCoordinates = true
+        samplerDescriptor.minFilter = .linear
+        samplerDescriptor.magFilter = .linear
+        samplerDescriptor.mipFilter = .linear
+        return device.makeSamplerState(descriptor: samplerDescriptor)!
     }
 
     static func buildDepthStencilState(device: MTLDevice) -> MTLDepthStencilState {
@@ -111,6 +123,12 @@ final class Renderer: NSObject {
         )
 
         // texture coordinates
+        vertexDescriptor.attributes[2] = MDLVertexAttribute(
+            name: MDLVertexAttributeTextureCoordinate,
+            format: .float2,
+            offset: 2 * MemoryLayout<simd_float3>.stride,
+            bufferIndex: 0
+        )
 
         // layouts
         vertexDescriptor.layouts[0] = MDLVertexBufferLayout(stride: 2 * MemoryLayout<simd_float3>.stride + MemoryLayout<simd_float2>.stride)
@@ -217,6 +235,9 @@ extension Renderer: MTKViewDelegate {
         )
 
         renderCommandEncoder.setVertexBytes(&vertexUniforms, length: MemoryLayout<VertexUniforms>.stride, index: 1)
+
+        renderCommandEncoder.setFragmentTexture(baseColorTexture, index: 0)
+        renderCommandEncoder.setFragmentSamplerState(samplerState, index: 0)
 
         for mesh in meshes {
             for (index, vertexBuffer) in mesh.vertexBuffers.enumerated() {

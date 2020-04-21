@@ -35,12 +35,14 @@ struct FragmentUniforms {
 struct VertexIn {
     float3 position [[ attribute(0) ]];
     float3 normal [[ attribute(1) ]];
+    float2 texCoords [[ attribute(2) ]];
 };
 
 struct VertexOut {
     float4 position [[ position ]];
     float3 normal;
     float3 worldPosition;
+    float2 texCoords;
 };
 
 vertex VertexOut vertex_main(VertexIn vertexIn [[ stage_in ]], constant VertexUniforms &uniforms [[ buffer(1) ]])
@@ -51,6 +53,7 @@ vertex VertexOut vertex_main(VertexIn vertexIn [[ stage_in ]], constant VertexUn
     vertexOut.position = uniforms.projectionMatrix * uniforms.viewMatrix * worldPosition; // clip space position
     vertexOut.worldPosition = worldPosition.xyz; // world space position
     vertexOut.normal = uniforms.normalMatrix * vertexIn.normal; // world normal
+    vertexOut.texCoords = vertexIn.texCoords;
 
     return vertexOut;
 }
@@ -64,9 +67,11 @@ constant float3 worldCameraPosition = float3(0, 0, -2);
 constant float specularStrength = 0.8;
 constant float specularPower = 8;
 
-fragment float4 fragment_main(VertexOut fragmentIn [[ stage_in ]])
+fragment float4 fragment_main(VertexOut fragmentIn [[ stage_in ]],
+                              texture2d<float> baseColorTexture [[ texture(0) ]],
+                              sampler baseColorSampler [[ sampler(0)]])
 {
-    float3 objectColor = float3(0.8, 0.2, 0.0);
+    float3 objectColor = baseColorTexture.sample(baseColorSampler, fragmentIn.texCoords).rgb;
 
     // ambient
     float3 ambientColor = ambientIntensity * lightColor;
