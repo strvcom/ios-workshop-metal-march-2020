@@ -88,12 +88,19 @@ final class Renderer: NSObject {
         let vertexDescriptor = MDLVertexDescriptor()
 
         // positions
+        vertexDescriptor.attributes[0] = MDLVertexAttribute(
+            name: MDLVertexAttributePosition,
+            format: .float3,
+            offset: 0,
+            bufferIndex: 0
+        )
 
         // normals
 
         // texture coordinates
 
         // layouts
+        vertexDescriptor.layouts[0] = MDLVertexBufferLayout(stride: MemoryLayout<simd_float3>.stride)
 
         return vertexDescriptor
     }
@@ -105,12 +112,19 @@ final class Renderer: NSObject {
         }
 
         // create buffer allocator
+        let bufferAllocator = MTKMeshBufferAllocator(device: device)
 
         // create asset
+        let asset = MDLAsset(url: modelURL, vertexDescriptor: vertexDescriptor, bufferAllocator: bufferAllocator)
 
         // load meshes
+        var meshes: (modelIOMeshes: [MDLMesh], metalKitMeshes: [MTKMesh])
 
-        var meshes: (modelIOMeshes: [MDLMesh], metalKitMeshes: [MTKMesh]) = (modelIOMeshes: [], metalKitMeshes: [])
+        do {
+            meshes = try MTKMesh.newMeshes(asset: asset, device: device)
+        } catch {
+            fatalError("Can't load resources")
+        }
 
         return meshes
     }
