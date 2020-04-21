@@ -38,6 +38,7 @@ final class Renderer: NSObject {
     private let vertexDescriptor: MDLVertexDescriptor
     private let meshes: [MTKMesh]
     private let commandQueue: MTLCommandQueue
+    private let renderPipeline: MTLRenderPipelineState
 
     init(view: MTKView, device: MTLDevice) {
         self.view = view
@@ -45,6 +46,7 @@ final class Renderer: NSObject {
         self.vertexDescriptor = Renderer.createVertexDescriptor()
         self.meshes = Renderer.loadResources(device: device, vertexDescriptor: vertexDescriptor).metalKitMeshes
         self.commandQueue = device.makeCommandQueue()!
+        self.renderPipeline = Renderer.buildPipeline(device: device, view: view, vertexDescriptor: vertexDescriptor)
 
         // create render pipeline
 
@@ -136,12 +138,28 @@ final class Renderer: NSObject {
         }
 
         // make vertex and fragment functions
+        let vertexFunction = library.makeFunction(name: "vertex_main")
+        let fragmentFunction = library.makeFunction(name: "fragment_main")
 
         // create pipeline descriptor
+        let pipelineDescriptor = MTLRenderPipelineDescriptor()
+
+        pipelineDescriptor.vertexFunction = vertexFunction
+        pipelineDescriptor.fragmentFunction = fragmentFunction
+
+        pipelineDescriptor.colorAttachments[0].pixelFormat = view.colorPixelFormat
+        pipelineDescriptor.depthAttachmentPixelFormat = view.depthStencilPixelFormat
+        pipelineDescriptor.vertexDescriptor = MTKMetalVertexDescriptorFromModelIO(vertexDescriptor)
 
         // create render pipeline state
+        let renderPipelineState: MTLRenderPipelineState
+        do {
+            renderPipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
+        } catch {
+            fatalError("Could not create render pipeline state object: \(error)")
+        }
 
-        fatalError("Not implemented")
+        return renderPipelineState
     }
 }
 
@@ -160,7 +178,28 @@ extension Renderer: MTKViewDelegate {
                 return
         }
 
-        // DRAWING VOODOO
+        guard let renderCommandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
+            return
+        }
+
+        renderCommandEncoder.setRenderPipelineState(renderPipeline)
+
+        for mesh in meshes {
+            for (index, vertexBuffer) in mesh.vertexBuffers.enumerated() {
+                renderCommandEncoder.setVertexBuffer(vertexBuffer.buffer, offset: vertexBuffer.offset, index: index)
+            }
+
+            for submesh in mesh.submeshes {
+                let indexBuffer = submesh.indexBuffer
+                renderCommandEncoder.drawIndexedPrimitives(type: submesh.primitiveType,
+                                                     indexCount: submesh.indexCount,
+                                                     indexType: submesh.indexType,
+                                                     indexBuffer: indexBuffer.buffer,
+                                                     indexBufferOffset: indexBuffer.offset)
+            }
+        }
+
+        renderCommandEncoder.endEncoding()
 
         commandBuffer.present(drawable)
         commandBuffer.commit()
