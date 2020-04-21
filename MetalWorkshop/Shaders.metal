@@ -40,11 +40,11 @@ struct VertexOut {
     float4 position [[ position ]];
 };
 
-vertex VertexOut vertex_main(VertexIn vertexIn [[ stage_in ]])
+vertex VertexOut vertex_main(VertexIn vertexIn [[ stage_in ]], constant VertexUniforms &uniforms [[ buffer(1) ]])
 {
     VertexOut vertexOut;
 
-    vertexOut.position = float4(vertexIn.position, 1.0);
+    vertexOut.position = uniforms.projectionMatrix * uniforms.viewMatrix * uniforms.modelMatrix * float4(vertexIn.position, 1.0);
 
     return vertexOut;
 }

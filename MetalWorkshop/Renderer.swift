@@ -40,6 +40,8 @@ final class Renderer: NSObject {
     private let commandQueue: MTLCommandQueue
     private let renderPipeline: MTLRenderPipelineState
 
+    private var currentTime: Float = 0
+
     init(view: MTKView, device: MTLDevice) {
         self.view = view
         self.device = device
@@ -182,7 +184,29 @@ extension Renderer: MTKViewDelegate {
             return
         }
 
+        currentTime += 1 / Float(view.preferredFramesPerSecond)
+        let rotation = (Float.pi / 3) * currentTime
+
         renderCommandEncoder.setRenderPipelineState(renderPipeline)
+
+        let modelMatrix = float4x4(rotationY: rotation)
+
+        let cameraPosition = simd_float3([0, 0.5, -2])
+        let viewMatrix = float4x4(translation: cameraPosition).inverse
+
+        let aspectRatio = Float(view.drawableSize.width / view.drawableSize.height)
+        let projectionMatrix = float4x4(projectionFov: π / 3, near: 0.1, far: 100, aspect: aspectRatio)
+
+        let normalMatrix = float3x3(normalFrom4x4: modelMatrix)
+
+        var vertexUniforms = VertexUniforms(
+            modelMatrix: modelMatrix,
+            viewMatrix: viewMatrix,
+            projectionMatrix: projectionMatrix,
+            normalMatrix: normalMatrix
+        )
+
+        renderCommandEncoder.setVertexBytes(&vertexUniforms, length: MemoryLayout<VertexUniforms>.stride, index: 1)
 
         for mesh in meshes {
             for (index, vertexBuffer) in mesh.vertexBuffers.enumerated() {
