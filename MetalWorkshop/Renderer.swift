@@ -37,8 +37,6 @@ final class Renderer: NSObject {
     private let device: MTLDevice
     private let vertexDescriptor: MDLVertexDescriptor
     private let meshes: [MTKMesh]
-
-    private let renderPipeline: MTLRenderPipelineState
     private let commandQueue: MTLCommandQueue
 
     init(view: MTKView, device: MTLDevice) {
@@ -46,8 +44,9 @@ final class Renderer: NSObject {
         self.device = device
         self.vertexDescriptor = Renderer.createVertexDescriptor()
         self.meshes = Renderer.loadResources(device: device, vertexDescriptor: vertexDescriptor).metalKitMeshes
-        self.renderPipeline = Renderer.buildPipeline(device: device, view: view, vertexDescriptor: vertexDescriptor)
         self.commandQueue = device.makeCommandQueue()!
+
+        // create render pipeline 
 
         // load depth stencil state
 
