@@ -42,6 +42,8 @@ final class Renderer: NSObject {
 
     private var currentTime: Float = 0
 
+    private let depthStencilState: MTLDepthStencilState
+
     init(view: MTKView, device: MTLDevice) {
         self.view = view
         self.device = device
@@ -50,9 +52,8 @@ final class Renderer: NSObject {
         self.commandQueue = device.makeCommandQueue()!
         self.renderPipeline = Renderer.buildPipeline(device: device, view: view, vertexDescriptor: vertexDescriptor)
 
-        // create render pipeline
-
         // load depth stencil state
+        self.depthStencilState = Renderer.buildDepthStencilState(device: device)
 
         // init texture loader
 
@@ -66,8 +67,7 @@ final class Renderer: NSObject {
         view.device = device
         view.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         view.colorPixelFormat = .bgra8Unorm
-
-        // set depth stencil state
+        view.depthStencilPixelFormat = .depth32Float
 
         // load texture
     }
@@ -85,7 +85,10 @@ final class Renderer: NSObject {
     }
 
     static func buildDepthStencilState(device: MTLDevice) -> MTLDepthStencilState {
-        fatalError("not implemented")
+        let depthStencilDescriptor = MTLDepthStencilDescriptor()
+        depthStencilDescriptor.depthCompareFunction = .less
+        depthStencilDescriptor.isDepthWriteEnabled = true
+        return device.makeDepthStencilState(descriptor: depthStencilDescriptor)!
     }
 
     static func createVertexDescriptor() -> MDLVertexDescriptor {
@@ -100,11 +103,17 @@ final class Renderer: NSObject {
         )
 
         // normals
+        vertexDescriptor.attributes[1] = MDLVertexAttribute(
+            name: MDLVertexAttributeNormal,
+            format: .float3,
+            offset: MemoryLayout<simd_float3>.stride,
+            bufferIndex: 0
+        )
 
         // texture coordinates
 
         // layouts
-        vertexDescriptor.layouts[0] = MDLVertexBufferLayout(stride: MemoryLayout<simd_float3>.stride)
+        vertexDescriptor.layouts[0] = MDLVertexBufferLayout(stride: 2 * MemoryLayout<simd_float3>.stride + MemoryLayout<simd_float2>.stride)
 
         return vertexDescriptor
     }
@@ -188,6 +197,7 @@ extension Renderer: MTKViewDelegate {
         let rotation = (Float.pi / 3) * currentTime
 
         renderCommandEncoder.setRenderPipelineState(renderPipeline)
+        renderCommandEncoder.setDepthStencilState(depthStencilState)
 
         let modelMatrix = float4x4(rotationY: rotation)
 

@@ -34,10 +34,12 @@ struct FragmentUniforms {
 
 struct VertexIn {
     float3 position [[ attribute(0) ]];
+    float3 normal [[ attribute(1) ]];
 };
 
 struct VertexOut {
     float4 position [[ position ]];
+    float3 normal;
 };
 
 vertex VertexOut vertex_main(VertexIn vertexIn [[ stage_in ]], constant VertexUniforms &uniforms [[ buffer(1) ]])
@@ -45,13 +47,14 @@ vertex VertexOut vertex_main(VertexIn vertexIn [[ stage_in ]], constant VertexUn
     VertexOut vertexOut;
 
     vertexOut.position = uniforms.projectionMatrix * uniforms.viewMatrix * uniforms.modelMatrix * float4(vertexIn.position, 1.0);
+    vertexOut.normal = uniforms.normalMatrix * vertexIn.normal;
 
     return vertexOut;
 }
 
 fragment float4 fragment_main(VertexOut fragmentIn [[ stage_in ]])
 {
-    float3 color = float3(0.0, 1.0, 0.0); // RGB => Green color
+    float3 normal = normalize(fragmentIn.normal);
 
-    return float4(color, 1);
+    return float4(normal, 1);
 }
