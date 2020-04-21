@@ -46,7 +46,7 @@ final class Renderer: NSObject {
         self.meshes = Renderer.loadResources(device: device, vertexDescriptor: vertexDescriptor).metalKitMeshes
         self.commandQueue = device.makeCommandQueue()!
 
-        // create render pipeline 
+        // create render pipeline
 
         // load depth stencil state
 
@@ -122,8 +122,6 @@ final class Renderer: NSObject {
         }
 
         // make vertex and fragment functions
-        let vertexFunction = library.makeFunction(name: "vertex_main")
-        let fragmentFunction = library.makeFunction(name: "fragment_main")
 
         // create pipeline descriptor
 
